@@ -23,11 +23,14 @@ jobs:
       - name: Install Docker
         run: |
           sudo apt-get update -y
+          sudo apt-get remove -y containerd.io
           sudo apt-get install -y docker.io
+          sudo systemctl start docker
+    # Add the current user to the docker group to avoid using sudo
 
       - name: Build Docker Image
         run: |
-          docker build -t myapp1:latest .
+          sudo docker build -t myapp1:latest .
 
       - name: Tag the Docker image
         run: |
