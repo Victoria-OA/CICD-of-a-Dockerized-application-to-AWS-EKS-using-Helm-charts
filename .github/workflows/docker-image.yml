@@ -52,12 +52,12 @@ jobs:
 
       - name: Update Image tag in Helm values
         run: |
-          sed -i.bak "s|latest|${{ github.sha }}|g" helm-chart/docker-cicd/values.yaml
+          sed -i.bak "s|latest|${{ github.sha }}|g" docker-cicd/values.yaml
 
       - name: Update Docker Username in Helm values
         run: |
-          sed -i.bak "s|username|${{ secrets.DOCKERHUB_USERNAME }}|g" helm-chart/docker-cicd/values.yaml
+          sed -i.bak "s|username|${{ secrets.DOCKERHUB_USERNAME }}|g" docker-cicd/values.yaml
 
       - name: Deploy Helm chart to EKS
         run: |
-          helm upgrade --install docker-cicd helm-chart/docker-cicd/ --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/myapp1 --set image.tag=${{ github.sha }}
+          helm upgrade --install docker-cicd docker-cicd/ --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/myapp1 --set image.tag=${{ github.sha }}
