@@ -1,4 +1,4 @@
-name: Deploy Docker Image to AWS EKS.
+name: Deploy Docker Image to AWS EKS
 
 on:
   push:
