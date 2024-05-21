@@ -1,0 +1,60 @@
+name: Deploy Docker Image to AWS EKS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y docker.io
+
+      - name: Build Docker Image
+        run: |
+          docker build -t myapp1:latest .
+
+      - name: Tag the Docker image
+        run: |
+          docker tag myapp1:latest ${{ secrets.DOCKERHUB_USERNAME }}/myapp1:latest
+
+      - name: Push Docker Image to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/myapp1:latest
+
+      - name: Copy SSH private key
+        run: echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+
+      - name: Set key file permissions
+        run: chmod 600 key.pem
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+
+      - name: Update Image tag in Helm values
+        run: |
+          sed -i.bak "s|latest|${{ github.sha }}|g" helm-chart/docker-cicd/values.yaml
+
+      - name: Update Docker Username in Helm values
+        run: |
+          sed -i.bak "s|username|${{ secrets.DOCKERHUB_USERNAME }}|g" helm-chart/docker-cicd/values.yaml
+
+      - name: Deploy Helm chart to EKS
+        run: |
+          helm upgrade --install docker-cicd helm-chart/docker-cicd/ --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/myapp1 --set image.tag=${{ github.sha }}
